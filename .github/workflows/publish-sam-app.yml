@@ -1,0 +1,35 @@
+name: Publish SAM App
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  id-token: write  # required for requesting the JWT
+  contents: read   # required for actions/checkout
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Git clone
+      uses: actions/checkout@v4
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.12"
+    - name: AWS login
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: arn:aws:iam::211125310871:role/github-sar-publisher
+        role-session-name: github-sar-publishing
+        aws-region: eu-west-2
+    - name: Build app
+      run: |
+        sam build
+    - name: Package app
+      run: |
+        sam package --s3-bucket aws-sam-cli-managed-default-samclisourcebucket-64zranuhuogu --output-template-file packaged.yaml
+    - name: Publish app
+      run: |
+        sam publish --template packaged.yaml

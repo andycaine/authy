@@ -1,0 +1,320 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform:
+  - 'AWS::LanguageExtensions'
+  - 'AWS::Serverless-2016-10-31'
+Description: A serverless authentication and authorisation stack.
+Parameters:
+  EmailInviteMessageTemplate:
+    Type: String
+    Default: "Hello {username}, welcome to your authy protected app. Your temporary password is {####}."
+    Description: The message template for the email invite message.
+  EmailInviteMessageSubject:
+    Type: String
+    Default: "Invite to app"
+    Description: The subject of the email invite message.
+  RequireMfa:
+    Type: String
+    AllowedValues:
+      - "true"
+      - "false"
+    Default: "true"
+    Description: Whether to require MFA for all users.
+  UserPoolDomainPrefix:
+    Type: String
+    Description: |
+      The domain prefix for the user pool OIDC endpoint and sign-in pages.
+  FQD:
+    Type: String
+    Description: |
+      The fully qualified domain name under which the authentication endpoints
+      will be deployed. This parameter is used to determine the allowable
+      callback URLs for the Cognito user pool client.
+  PDPLayerArn:
+    Type: String
+    Default: ""
+    Description: The ARN of the PDP layer.
+  AdminEmail:
+    Type: String
+    Description: |
+      The email address of the administrator account.
+  OriginKey:
+    Type: String
+    NoEcho: true
+    MinLength: '32'
+    MaxLength: '128'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    Description: |
+      The origin key used to ensure calls are made via CloudFront.
+Globals:
+  Function:
+    Timeout: 3
+
+Metadata:
+  AWS::ServerlessRepo::Application:
+    Name: authy
+    Description: A serverless authentication and authorisation stack.
+    Author: Andy Caine
+    SpdxLicenseId: MIT
+    LicenseUrl: LICENSE
+    ReadmeUrl: README.md
+    Labels: ['authz', 'authentication', 'authorisation', 'OIDC', 'python', 'cognito', 'Open ID Connect']
+    HomePageUrl: https://github.com/andycaine/authy#readme
+    SemanticVersion: 0.1.0
+    SourceCodeUrl: https://github.com/andycaine/authy
+
+Conditions:
+  IsMfaRequired: !Equals [!Ref RequireMfa, "true"]
+  HasPdPLayer: !Not [!Equals [!Ref PDPLayerArn, ""]]
+
+Resources:
+  CognitoAbacAuthorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: cognito_abac_authorizer/
+      Handler: app.handler
+      Runtime: python3.12
+      Environment:
+        Variables:
+          CUSTOM_ORIGIN_KEY: !Ref OriginKey
+          REGION: !Ref AWS::Region
+          USER_POOL_ID: !Ref UserPool
+          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+      Layers:
+        - !If
+          - HasPdPLayer
+          - !Ref PDPLayerArn
+          - !Ref AWS::NoValue
+      Architectures:
+        - arm64
+
+  OriginKeyAuthorizer:
+    Type: AWS::Serverless::Application
+    Properties:
+      Location:
+        ApplicationId: 'arn:aws:serverlessrepo:eu-west-2:211125310871:applications/origin-key-authorizer'
+        SemanticVersion: 0.1.0
+      Parameters:
+        OriginKey: !Ref OriginKey
+
+  LambdaAuthorizerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeAuthorizerPolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: lambda:InvokeFunction
+                Resource:
+                  - !GetAtt CognitoAbacAuthorizer.Arn
+
+  AuthEndpoints:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        Authorizers:
+          OriginKeyAuthorizer:
+            FunctionArn: !GetAtt OriginKeyAuthorizer.Outputs.OriginKeyAuthorizerArn
+            AuthorizerPayloadFormatVersion: 2.0
+            EnableSimpleResponses: true
+            FunctionInvokeRole: !GetAtt OriginKeyAuthorizer.Outputs.LambdaAuthorizerRoleArn
+            Identity:
+              ReauthorizeEvery: 300
+              Headers:
+                - 'X-Custom-Origin-Key'
+        DefaultAuthorizer: OriginKeyAuthorizer
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+        InviteMessageTemplate:
+          EmailMessage: !Ref EmailInviteMessageTemplate
+          EmailSubject: !Ref EmailInviteMessageSubject
+      AutoVerifiedAttributes:
+        - email
+      DeviceConfiguration:
+        ChallengeRequiredOnNewDevice: true
+        DeviceOnlyRememberedOnUserPrompt: true
+      EmailVerificationMessage: The verification code to your new account is {####}
+      EmailVerificationSubject: Verify your new account
+      EnabledMfas:
+        - SOFTWARE_TOKEN_MFA
+      MfaConfiguration: !If [IsMfaRequired, "ON", "OPTIONAL"]
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 15
+          RequireLowercase: true
+          RequireNumbers: false
+          RequireSymbols: false
+          RequireUppercase: true
+          TemporaryPasswordValidityDays: 1
+      Schema:
+        - Mutable: true
+          Name: name
+          Required: true
+      UsernameAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: false
+      VerificationMessageTemplate:
+        DefaultEmailOption: CONFIRM_WITH_CODE
+        EmailMessage: The verification code to your new account is {####}
+        EmailSubject: Verify your new account
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref UserPoolDomainPrefix
+      UserPoolId: !Ref UserPool
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref UserPool
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+        - profile
+        - phone
+        - email
+        - openid
+        - aws.cognito.signin.user.admin
+      CallbackURLs:
+        - !Sub "https://${FQD}/auth/oidc"
+      IdTokenValidity: 60
+      LogoutURLs:
+        - !Sub "https://${FQD}/auth/login"
+      SupportedIdentityProviders:
+        - COGNITO
+      TokenValidityUnits:
+        IdToken: minutes
+
+  AdminGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      Description: Group Admins
+      GroupName: Admins
+      Precedence: 0
+      UserPoolId: !Ref UserPool
+
+  AdminUser:
+    Type: AWS::Cognito::UserPoolUser
+    Properties:
+      UserPoolId: !Ref UserPool
+      DesiredDeliveryMediums:
+        - EMAIL
+      Username: !Ref AdminEmail
+      ValidationData:
+        - Name: email
+          Value: "true"
+
+  AdminUserToGroup:
+    Type: AWS::Cognito::UserPoolUserToGroupAttachment
+    Properties:
+      GroupName: Admins
+      Username: !Ref AdminEmail
+      UserPoolId: !Ref UserPool
+    DependsOn:
+      - AdminUser
+      - AdminGroup
+
+  OIDC:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: oidc_handler/
+      Handler: app.handler
+      Runtime: python3.12
+      Environment:
+        Variables:
+          AUTH_DOMAIN: !Sub "${UserPoolDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+          CLIENT_ID: !Ref UserPoolClient
+          CF_DOMAIN: !Ref FQD
+          OIDC_CALLBACK_PATH: /auth/oidc
+      Architectures:
+        - arm64
+      Events:
+        OIDC:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthEndpoints
+            Path: /auth/oidc
+            Method: get
+
+  Login:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: login_handler/
+      Handler: app.handler
+      Runtime: python3.12
+      Environment:
+        Variables:
+          CLIENT_ID: !Ref UserPoolClient
+          CF_DOMAIN: !Ref FQD
+          OIDC_CALLBACK_PATH: /auth/oidc
+          AUTH_DOMAIN: !Sub "${UserPoolDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+      Architectures:
+        - arm64
+      Events:
+        Login:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthEndpoints
+            Path: /auth/login
+            Method: get
+
+  Logout:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: logout_handler/
+      Handler: app.handler
+      Runtime: python3.12
+      Environment:
+        Variables:
+          CLIENT_ID: !Ref UserPoolClient
+          CF_DOMAIN: !Ref FQD
+          OIDC_CALLBACK_PATH: /auth/oidc
+          AUTH_DOMAIN: !Sub "${UserPoolDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+          LOGOUT_PATH: /auth/login
+      Architectures:
+        - arm64
+      Events:
+        Logout:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AuthEndpoints
+            Path: /auth/logout
+            Method: get
+
+Outputs:
+  AuthEndpointsURL:
+    Description: "URL for the authentication endpoints"
+    Value: !Sub "https://${AuthEndpoints}.execute-api.${AWS::Region}.amazonaws.com/"
+  AuthEndpointsDomain:
+    Description: "Domain for the authentication endpoints"
+    Value: !Sub "${AuthEndpoints}.execute-api.${AWS::Region}.amazonaws.com"
+  LambdaAuthorizerRoleArn:
+    Description: "ARN of the Lambda Authorizer Role"
+    Value: !GetAtt LambdaAuthorizerRole.Arn
+  CognitoAbacAuthorizerArn:
+    Description: "ARN of the Cognito Abac Authorizer"
+    Value: !GetAtt CognitoAbacAuthorizer.Arn
+  UserPoolId:
+    Description: "ID of the user pool"
+    Value: !Ref UserPool
