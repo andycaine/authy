@@ -94,9 +94,9 @@ def handler(event, context):
 
         },
         'cookies': [
-            f"bd_auth_id_token={auth_token['id_token']}; "
+            f"authy_id_token={auth_token['id_token']}; "
             "Path=/; HttpOnly; Secure",
-            f"bd_auth_refresh_token={auth_token['refresh_token']}; "
+            f"authy_refresh_token={auth_token['refresh_token']}; "
             "Path=/; HttpOnly; Secure",
         ],
         'body': ''

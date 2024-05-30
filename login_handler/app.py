@@ -47,7 +47,7 @@ def handler(event, context):
     if cookie_strings:
         logger.info('Cookie found - attempting to use refresh token')
         cookies = parse_cookie_strings(cookie_strings)
-        refresh_token = cookies.get('bd_auth_refresh_token')
+        refresh_token = cookies.get('authy_refresh_token')
         if refresh_token:
             data = {
                 'grant_type': 'refresh_token',
@@ -71,7 +71,7 @@ def handler(event, context):
                         'Location': next_path
                     },
                     'cookies': [
-                        f"bd_auth_id_token={auth_token['id_token']}; Path=/; "
+                        f"authy_id_token={auth_token['id_token']}; Path=/; "
                         "HttpOnly; Secure",
                     ],
                     'body': ''

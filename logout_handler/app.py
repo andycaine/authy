@@ -37,8 +37,8 @@ def handler(event, context):
             'Location': redirect_url
         },
         'cookies': [
-            generate_delete_cookie('bd_auth_id_token'),
-            generate_delete_cookie('bd_auth_refresh_token')
+            generate_delete_cookie('authy_id_token'),
+            generate_delete_cookie('authy_refresh_token')
         ],
         'body': ''
     }

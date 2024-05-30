@@ -98,11 +98,12 @@ def test_handle_valid_request(app, valid_request):
         'statusCode': 302,
         'headers': {
             'Location': valid_request.next_path_cookie,
-            'Cache-Control': 'max-age=0, no-cache, no-store, must-revalidate, private'
+            'Cache-Control': ('max-age=0, no-cache, no-store, '
+                              'must-revalidate, private')
         },
         'cookies': [
-            'bd_auth_id_token=test_id_token; Path=/; HttpOnly; Secure',
-            'bd_auth_refresh_token=test_refresh_token; Path=/; HttpOnly; '
+            'authy_id_token=test_id_token; Path=/; HttpOnly; Secure',
+            'authy_refresh_token=test_refresh_token; Path=/; HttpOnly; '
             'Secure',
         ],
         'body': ''

@@ -41,7 +41,7 @@ keys = json.loads(response.decode('utf-8'))['keys']
 def get_id_token(event):
     cookie_strings = event.get('cookies', [])
     cookies = {k: v for k, v in (s.split('=') for s in cookie_strings)}
-    return cookies.get('bd_auth_id_token', None)
+    return cookies.get('authy_id_token', None)
 
 
 def get_origin_key_header(event):
