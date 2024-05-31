@@ -1,6 +1,5 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 import json
-import io
 
 from freezegun import freeze_time
 import pytest
@@ -26,24 +25,25 @@ jwks = {
 
 
 @pytest.fixture
-def set_env(monkeypatch):
+def app(monkeypatch):
     monkeypatch.setenv('REGION', 'eu-west-2')
     monkeypatch.setenv('USER_POOL_ID', 'eu-west-2_2dIWFAizy')
     monkeypatch.setenv('USER_POOL_CLIENT_ID', '2vh0abc7eh343nq67v2alno0k7')
 
-
-@pytest.fixture
-def app(set_env):
-    with patch('urllib.request.urlopen') as mock_urlopen:
-        mock_response = io.BytesIO(json.dumps(jwks).encode('utf-8'))
-        mock_urlopen.return_value = mock_response
-
-        from cognito_abac_authorizer import app
-        yield app
+    from cognito_abac_authorizer import app
+    yield app
 
 
-@freeze_time("2024-02-29 18:00:00")
-def test_valid_jwt(app):
+@freeze_time("2024-02-29 18:09:00")
+@patch('urllib.request.urlopen')
+def test_valid_jwt(mock_urlopen, app):
+    mock_response = MagicMock()
+    mock_response.read.return_value = json.dumps(jwks)
+    mock_response.__enter__.return_value = mock_response
+    mock_response.__exit__.return_value = None
+
+    mock_urlopen.return_value = mock_response
+
     def test_authoriser(*_):
         return True, {}
 
