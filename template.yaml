@@ -55,7 +55,7 @@ Metadata:
     SpdxLicenseId: MIT
     LicenseUrl: LICENSE
     ReadmeUrl: README.md
-    Labels: ['authz', 'authentication', 'authorisation', 'OIDC', 'python', 'cognito', 'Open ID Connect']
+    Labels: ['authz', 'authentication', 'authorisation', 'OIDC', 'python', 'cognito']
     HomePageUrl: https://github.com/andycaine/authy#readme
     SemanticVersion: 0.1.0
     SourceCodeUrl: https://github.com/andycaine/authy
