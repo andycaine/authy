@@ -17,14 +17,19 @@ Parameters:
       - "false"
     Default: "true"
     Description: Whether to require MFA for all users.
-  UserPoolDomainPrefix:
+  AuthDomainName:
+    Type: String
+    Description: The domain name for the sign-in pages e.g. auth.yourdomain.com.
+  AuthDomainNameHostedZoneId:
+    Type: String
+    Description: The ID of the hosted zone for the AuthDomainName.
+  AuthDomainNameCertArn:
+    Type: String
+    Description: The ARN of the certificate for the AuthDomainName.
+  DomainName:
     Type: String
     Description: |
-      The domain prefix for the user pool OIDC endpoint and sign-in pages.
-  FQD:
-    Type: String
-    Description: |
-      The fully qualified domain name under which the authentication endpoints
+      The domain name under which the authentication endpoints
       will be deployed. This parameter is used to determine the allowable
       callback URLs for the Cognito user pool client.
   PDPLayerArn:
@@ -57,7 +62,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['authz', 'authentication', 'authorisation', 'OIDC', 'python', 'cognito']
     HomePageUrl: https://github.com/andycaine/authy#readme
-    SemanticVersion: 0.1.0
+    SemanticVersion: 0.2.0
     SourceCodeUrl: https://github.com/andycaine/authy
 
 Conditions:
@@ -178,8 +183,10 @@ Resources:
   UserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
-      Domain: !Ref UserPoolDomainPrefix
+      Domain: !Ref AuthDomainName
       UserPoolId: !Ref UserPool
+      CustomDomainConfig:
+        CertificateArn: !Ref AuthDomainNameCertArn
 
   UserPoolClient:
     Type: AWS::Cognito::UserPoolClient
@@ -195,10 +202,10 @@ Resources:
         - openid
         - aws.cognito.signin.user.admin
       CallbackURLs:
-        - !Sub "https://${FQD}/auth/oidc"
+        - !Sub "https://${DomainName}/auth/oidc"
       IdTokenValidity: 60
       LogoutURLs:
-        - !Sub "https://${FQD}/auth/login"
+        - !Sub "https://${DomainName}/auth/login"
       SupportedIdentityProviders:
         - COGNITO
       TokenValidityUnits:
@@ -241,9 +248,9 @@ Resources:
       Runtime: python3.12
       Environment:
         Variables:
-          AUTH_DOMAIN: !Sub "${UserPoolDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+          AUTH_DOMAIN: !Ref AuthDomainName
           CLIENT_ID: !Ref UserPoolClient
-          CF_DOMAIN: !Ref FQD
+          CF_DOMAIN: !Ref DomainName
           OIDC_CALLBACK_PATH: /auth/oidc
       Architectures:
         - arm64
@@ -264,9 +271,9 @@ Resources:
       Environment:
         Variables:
           CLIENT_ID: !Ref UserPoolClient
-          CF_DOMAIN: !Ref FQD
+          CF_DOMAIN: !Ref DomainName
           OIDC_CALLBACK_PATH: /auth/oidc
-          AUTH_DOMAIN: !Sub "${UserPoolDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+          AUTH_DOMAIN: !Ref AuthDomainName
       Architectures:
         - arm64
       Events:
@@ -286,9 +293,9 @@ Resources:
       Environment:
         Variables:
           CLIENT_ID: !Ref UserPoolClient
-          CF_DOMAIN: !Ref FQD
+          CF_DOMAIN: !Ref DomainName
           OIDC_CALLBACK_PATH: /auth/oidc
-          AUTH_DOMAIN: !Sub "${UserPoolDomainPrefix}.auth.${AWS::Region}.amazoncognito.com"
+          AUTH_DOMAIN: !Ref AuthDomainName
           LOGOUT_PATH: /auth/login
       Architectures:
         - arm64
@@ -299,6 +306,16 @@ Resources:
             ApiId: !Ref AuthEndpoints
             Path: /auth/logout
             Method: get
+
+  WebRecordSet:
+    Type: "AWS::Route53::RecordSet"
+    Properties:
+      HostedZoneId: !Ref AuthDomainNameHostedZoneId
+      Name: !Ref AuthDomainName
+      Type: CNAME
+      TTL: '300'
+      ResourceRecords:
+        - !GetAtt UserPoolDomain.CloudFrontDistribution
 
 Outputs:
   AuthEndpointsURL:

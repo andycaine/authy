@@ -89,7 +89,7 @@ OriginKey:
 Authy:
     ...
     Parameters:
-      OriginKey: !Ref PDPLayer
+      OriginKey: !Sub '{{resolve:secretsmanager:${OriginKey}}}'
       ...
 
 CloudFrontDistro:
