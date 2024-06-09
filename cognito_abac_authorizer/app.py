@@ -58,8 +58,13 @@ def handler(event, context):
         raise Exception('Unauthorized')  # Return a 401 Unauthorized response
 
     signing_key = jwks_client.get_signing_key_from_jwt(id_token)
-    claims = jwt.decode(id_token, signing_key.key, audience=client_id,
-                        algorithms=["RS256"])
+    try:
+        claims = jwt.decode(id_token, signing_key.key, audience=client_id,
+                            algorithms=["RS256"])
+    except Exception as e:
+        logger.info(f'Failed to decode JWT: {str(e)} - '
+                    'returning unauthorised (401)')
+        raise Exception('Unauthorized')  # Return a 401 Unauthorized response
 
     # now we can use the claims
     logger.info(f'JWT validated with the following claims: {claims}')

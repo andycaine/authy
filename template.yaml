@@ -62,7 +62,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['authz', 'authentication', 'authorisation', 'OIDC', 'python', 'cognito']
     HomePageUrl: https://github.com/andycaine/authy#readme
-    SemanticVersion: 0.2.0
+    SemanticVersion: 0.2.1
     SourceCodeUrl: https://github.com/andycaine/authy
 
 Conditions:
