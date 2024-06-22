@@ -50,12 +50,12 @@ Parameters:
       The origin key used to ensure calls are made via CloudFront.
   SessionInactivityTimeoutMins:
     Type: Number
-    Default: '15'
+    Default: '60'
     MinValue: '1'
     Description: The inactivity timeout for sessions in minutes.
   SessionTimeoutMins:
     Type: Number
-    Default: '60'
+    Default: '480'
     MinValue: '1'
     Description: The session timeout in minutes.
 Globals:
