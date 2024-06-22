@@ -189,7 +189,7 @@ Resources:
     Properties:
       AccountRecoverySetting:
         RecoveryMechanisms:
-          - Name: verified_email
+          - Name: admin_only
             Priority: 1
       AdminCreateUserConfig:
         AllowAdminCreateUserOnly: true
