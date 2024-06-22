@@ -1,7 +1,5 @@
 import os
-from secrets import token_hex
-import json
-import requests
+import secrets
 import logging
 import urllib.parse
 
@@ -11,76 +9,41 @@ import pkce
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-client_id = os.environ.get('CLIENT_ID')
-cf_domain = os.environ.get('CF_DOMAIN')
-auth_domain = os.environ.get('AUTH_DOMAIN')
-oidc_callback_path = os.environ.get('OIDC_CALLBACK_PATH')
+client_id = os.environ['CLIENT_ID']
+cf_domain = os.environ['CF_DOMAIN']
+auth_domain = os.environ['AUTH_DOMAIN']
+oidc_callback_path = os.environ['OIDC_CALLBACK_PATH']
 
 
 def build_url(domain, path):
     return f"https://{domain}{path}"
 
 
-oidc_callback_url = build_url(cf_domain, oidc_callback_path)
+oidc_callback_url = urllib.parse.quote_plus(build_url(cf_domain,
+                                                      oidc_callback_path))
 oidcEndpoint = build_url(auth_domain, '')
 
 
 def generate_random_string(length):
-    return token_hex(length // 2)
+    return secrets.token_hex(length // 2)
 
 
-def parse_cookie_strings(cookie_strings):
-    cookies = {}
-    for pair in cookie_strings:
-        key, value = pair.split('=')
-        cookies[key.strip()] = value
-    return cookies
+def bad_request():
+    return {
+        'statusCode': 400,
+        'body': 'Bad Request'
+    }
 
 
 def handler(event, context):
-    logger.info('Event: %s', event)
     next_path = urllib.parse.unquote_plus(
         event.get('queryStringParameters', {}).get('next', '/')
     )
-    # Firstly, try to get a new id_token using the refresh token
-    cookie_strings = event.get('cookies', [])
-    if cookie_strings:
-        logger.info('Cookie found - attempting to use refresh token')
-        cookies = parse_cookie_strings(cookie_strings)
-        refresh_token = cookies.get('authy_refresh_token')
-        if refresh_token:
-            data = {
-                'grant_type': 'refresh_token',
-                'client_id': client_id,
-                'refresh_token': refresh_token
-            }
-            try:
-                response = requests.post(f"{oidcEndpoint}/oauth2/token",
-                                         data=data)
-                response.raise_for_status()
-                auth_token = response.json()
-
-                if 'id_token' not in auth_token:
-                    raise ValueError("Error refreshing session - "
-                                     f"no id_token: {json.dumps(auth_token)}")
-
-                logger.info("Refreshed session silently")
-                return {
-                    'statusCode': 302,
-                    'headers': {
-                        'Location': next_path
-                    },
-                    'cookies': [
-                        f"authy_id_token={auth_token['id_token']}; Path=/; "
-                        "HttpOnly; Secure",
-                    ],
-                    'body': ''
-                }
-            except Exception as e:
-                logger.error("Error refreshing session", exc_info=e)
-
-    logger.info("No cookie found - unable to refresh session with refresh "
-                "token")
+    if urllib.parse.urlparse(next_path).netloc:
+        # all redirects should be relative here
+        logger.info('CIS_OPEN_REDIRECT_ATTEMPT_BLOCKED: '
+                    f'attempt to redirect to {next_path}')
+        return bad_request()
 
     # Send a redirect to the IdP's login page, after storing state and the
     # code verifier in cookies so that they can be used to validate the

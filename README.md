@@ -33,16 +33,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def check_authz(event, id_attrs):
-    group = id_attrs.get('groups', [])
-
-    if 'Admins' in group:
+def check_authz(event, session):
+    if 'Admins' in session.groups:
         return True, {}
 
     http = event['requestContext']['http']
     path = http['path']
 
-    if 'BlogAdmins' in group:
+    if 'BlogAdmins' in session.groups:
         if path.startswith('/blog/'):
             return True, {}
 

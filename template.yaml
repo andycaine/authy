@@ -48,6 +48,16 @@ Parameters:
     AllowedPattern: '[a-zA-Z0-9]*'
     Description: |
       The origin key used to ensure calls are made via CloudFront.
+  SessionInactivityTimeoutMins:
+    Type: Number
+    Default: '15'
+    MinValue: '1'
+    Description: The inactivity timeout for sessions in minutes.
+  SessionTimeoutMins:
+    Type: Number
+    Default: '60'
+    MinValue: '1'
+    Description: The session timeout in minutes.
 Globals:
   Function:
     Timeout: 3
@@ -62,7 +72,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['authz', 'authentication', 'authorisation', 'OIDC', 'python', 'cognito']
     HomePageUrl: https://github.com/andycaine/authy#readme
-    SemanticVersion: 0.2.1
+    SemanticVersion: 0.3.0
     SourceCodeUrl: https://github.com/andycaine/authy
 
 Conditions:
@@ -70,19 +80,56 @@ Conditions:
   HasPdPLayer: !Not [!Equals [!Ref PDPLayerArn, ""]]
 
 Resources:
-  CognitoAbacAuthorizer:
+
+  LibLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: ./lib/
+      CompatibleRuntimes:
+        - python3.12
+      CompatibleArchitectures:
+        - arm64
+      Description: Library code shared by authy functions.
+      LayerName: auth-lib
+      RetentionPolicy: Delete
+    Metadata:
+      BuildMethod: python3.12
+      BuildArchitecture: arm64
+
+  SessionsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      BillingMode: PAY_PER_REQUEST
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      OnDemandThroughput:
+        MaxReadRequestUnits: 10
+        MaxWriteRequestUnits: 10
+      TimeToLiveSpecification:
+        Enabled: true
+        AttributeName: expires_at
+
+  SessionAbacAuthorizer:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: cognito_abac_authorizer/
+      CodeUri: session_abac_authorizer/
       Handler: app.handler
       Runtime: python3.12
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
       Environment:
         Variables:
           CUSTOM_ORIGIN_KEY: !Ref OriginKey
-          REGION: !Ref AWS::Region
-          USER_POOL_ID: !Ref UserPool
-          USER_POOL_CLIENT_ID: !Ref UserPoolClient
+          SESSION_INACTIVITY_TIMEOUT_MINS: !Ref SessionInactivityTimeoutMins
+          SESSION_TIMEOUT_MINS: !Ref SessionTimeoutMins
+          SESSIONS_TABLE_NAME: !Ref SessionsTable
       Layers:
+        - !Ref LibLayer
         - !If
           - HasPdPLayer
           - !Ref PDPLayerArn
@@ -119,7 +166,7 @@ Resources:
               - Effect: Allow
                 Action: lambda:InvokeFunction
                 Resource:
-                  - !GetAtt CognitoAbacAuthorizer.Arn
+                  - !GetAtt SessionAbacAuthorizer.Arn
 
   AuthEndpoints:
     Type: AWS::Serverless::HttpApi
@@ -246,12 +293,22 @@ Resources:
       CodeUri: oidc_handler/
       Handler: app.handler
       Runtime: python3.12
+      Layers:
+        - !Ref LibLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
       Environment:
         Variables:
           AUTH_DOMAIN: !Ref AuthDomainName
           CLIENT_ID: !Ref UserPoolClient
           CF_DOMAIN: !Ref DomainName
           OIDC_CALLBACK_PATH: /auth/oidc
+          SESSION_INACTIVITY_TIMEOUT_MINS: !Ref SessionInactivityTimeoutMins
+          SESSION_TIMEOUT_MINS: !Ref SessionTimeoutMins
+          SESSIONS_TABLE_NAME: !Ref SessionsTable
+          REGION: !Ref AWS::Region
+          USER_POOL_ID: !Ref UserPool
       Architectures:
         - arm64
       Events:
@@ -290,13 +347,18 @@ Resources:
       CodeUri: logout_handler/
       Handler: app.handler
       Runtime: python3.12
+      Layers:
+        - !Ref LibLayer
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref SessionsTable
       Environment:
         Variables:
           CLIENT_ID: !Ref UserPoolClient
           CF_DOMAIN: !Ref DomainName
-          OIDC_CALLBACK_PATH: /auth/oidc
           AUTH_DOMAIN: !Ref AuthDomainName
           LOGOUT_PATH: /auth/login
+          SESSIONS_TABLE_NAME: !Ref SessionsTable
       Architectures:
         - arm64
       Events:
@@ -327,9 +389,9 @@ Outputs:
   LambdaAuthorizerRoleArn:
     Description: "ARN of the Lambda Authorizer Role"
     Value: !GetAtt LambdaAuthorizerRole.Arn
-  CognitoAbacAuthorizerArn:
-    Description: "ARN of the Cognito Abac Authorizer"
-    Value: !GetAtt CognitoAbacAuthorizer.Arn
+  SessionAbacAuthorizerArn:
+    Description: "ARN of the Session Abac Authorizer"
+    Value: !GetAtt SessionAbacAuthorizer.Arn
   UserPoolId:
     Description: "ID of the user pool"
     Value: !Ref UserPool

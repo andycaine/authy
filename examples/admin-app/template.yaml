@@ -1,0 +1,140 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Test harness for testing the authy stack.
+Parameters:
+  AuthEndpointsDomainName:
+    Type: String
+    Description: The domain name for the auth endpoints.
+  DomainName:
+    Type: String
+    Description: The domain name for this test app.
+  CertificateArn:
+    Type: String
+    Description: The ARN of the certificate for this app.
+  HostedZoneId:
+    Type: String
+    Description: The ID of the hosted zone for this domain.
+  LambdaAuthorizerRoleArn:
+    Type: String
+    Description: The ARN of the lambda authorizer role.
+  AbacAuthorizerArn:
+    Type: String
+    Description: The ARN of the ABAC authorizer.
+Globals:
+  Function:
+    Timeout: 3
+
+Resources:
+
+  AdminEndpoint:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        Authorizers:
+          AbacAuthorizer:
+            FunctionArn: !Ref AbacAuthorizerArn
+            AuthorizerPayloadFormatVersion: 2.0
+            EnableSimpleResponses: true
+            FunctionInvokeRole: !Ref LambdaAuthorizerRoleArn
+        DefaultAuthorizer: AbacAuthorizer
+
+  AdminApp:
+    Type: AWS::Serverless::Function
+    Properties:
+      InlineCode: |
+        def handler(event, context):
+            return {
+                "statusCode": 200,
+                "body": "<p>Hello, World!</p>",
+                "headers": {
+                    "content-type": "text/html"
+                }
+            }
+      Handler: index.handler
+      Runtime: python3.12
+      Architectures:
+        - arm64
+      Events:
+        Http:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref AdminEndpoint
+            Path: /admin
+            Method: get
+
+
+  CloudFrontDistro:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName: !Ref AuthEndpointsDomainName
+            Id: AuthEndpoint
+            OriginCustomHeaders:
+              - HeaderName: X-Custom-Origin-Key
+                HeaderValue: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+          - DomainName: !Sub ${AdminEndpoint}.execute-api.${AWS::Region}.amazonaws.com
+            Id: AdminEndpoint
+            OriginCustomHeaders:
+              - HeaderName: X-Custom-Origin-Key
+                HeaderValue: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+            CustomOriginConfig:
+              OriginProtocolPolicy: https-only
+              OriginSSLProtocols:
+                - TLSv1.2
+        DefaultCacheBehavior:
+          TargetOriginId: AuthEndpoint
+          AllowedMethods:
+            - HEAD
+            - DELETE
+            - POST
+            - GET
+            - OPTIONS
+            - PUT
+            - PATCH
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # caching disabled
+          Compress: true
+          OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac # AllViewerExceptHostHeader
+          ViewerProtocolPolicy: redirect-to-https
+        Enabled: true
+        HttpVersion: http2and3
+        PriceClass: PriceClass_100
+        CacheBehaviors:
+          - PathPattern: /admin*
+            TargetOriginId: AdminEndpoint
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - HEAD
+              - GET
+              - OPTIONS
+            CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # caching disabled
+            Compress: true
+            OriginRequestPolicyId: b689b0a8-53d0-40ab-baf2-68738e2966ac # AllViewerExceptHostHeader
+        Aliases:
+          - !Ref DomainName
+        ViewerCertificate:
+          AcmCertificateArn: !Ref CertificateArn
+          MinimumProtocolVersion: TLSv1.2_2021
+          SslSupportMethod: sni-only
+
+  WebRecordSetGroup:
+    Type: "AWS::Route53::RecordSetGroup"
+    Properties:
+      HostedZoneId: !Ref HostedZoneId
+      RecordSets:
+        - AliasTarget:
+            DNSName: !GetAtt CloudFrontDistro.DomainName
+            EvaluateTargetHealth: false
+            HostedZoneId: Z2FDTNDATAQYW2 # CloudFront hosted zone ID
+          Name: !Ref DomainName
+          Type: A
+        - AliasTarget:
+            DNSName: !GetAtt CloudFrontDistro.DomainName
+            EvaluateTargetHealth: false
+            HostedZoneId: Z2FDTNDATAQYW2 # CloudFront hosted zone ID
+          Name: !Ref DomainName
+          Type: AAAA

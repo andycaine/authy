@@ -1,0 +1,26 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: An example PDP layer stack for authy.
+
+Resources:
+
+  PDPLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: ./test-pdp-layer/
+      CompatibleRuntimes:
+        - python3.12
+      CompatibleArchitectures:
+        - arm64
+      Description: |
+        A layer that provides the PDP (Policy Decision Point) function.
+      LayerName: pdp-layer
+      RetentionPolicy: Delete
+    Metadata:
+      BuildMethod: python3.12
+      BuildArchitecture: arm64
+
+Outputs:
+  PDPLayerArn:
+    Description: "The ARN for the example PDP layer"
+    Value: !Ref PDPLayer
