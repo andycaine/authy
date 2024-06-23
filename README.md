@@ -114,7 +114,7 @@ AuthenticatedEndpoint:
     Auth:
       Authorizers:
         CognitoAbacAuthorizer:
-          FunctionArn: !GetAtt Authy.Outputs.CognitoAbacAuthorizerArn
+          FunctionArn: !GetAtt Authy.Outputs.SessionAbacAuthorizerArn
           AuthorizerPayloadFormatVersion: 2.0
           EnableSimpleResponses: true
           FunctionInvokeRole: !GetAtt Authy.Outputs.LambdaAuthorizerRoleArn
