@@ -5,9 +5,11 @@ import urllib.parse
 
 import pkce
 
+import vocab
+import httplambda
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+vocab.configure(context_fn=httplambda.logging_context)
+logger = logging.getLogger('authy.login_handler')
 
 client_id = os.environ['CLIENT_ID']
 cf_domain = os.environ['CF_DOMAIN']
@@ -28,22 +30,15 @@ def generate_random_string(length):
     return secrets.token_hex(length // 2)
 
 
-def bad_request():
-    return {
-        'statusCode': 400,
-        'body': 'Bad Request'
-    }
-
-
-def handler(event, context):
+@httplambda.route
+def handler(request):
     next_path = urllib.parse.unquote_plus(
-        event.get('queryStringParameters', {}).get('next', '/')
+        request.args.get('next', '/')
     )
     if urllib.parse.urlparse(next_path).netloc:
         # all redirects should be relative here
-        logger.info('CIS_OPEN_REDIRECT_ATTEMPT_BLOCKED: '
-                    f'attempt to redirect to {next_path}')
-        return bad_request()
+        logger.malicious_redirect_attempt('anonymous', next_path)
+        return httplambda.bad_request()
 
     # Send a redirect to the IdP's login page, after storing state and the
     # code verifier in cookies so that they can be used to validate the

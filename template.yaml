@@ -61,6 +61,8 @@ Parameters:
 Globals:
   Function:
     Timeout: 3
+    LoggingConfig:
+      LogFormat: JSON
 
 Metadata:
   AWS::ServerlessRepo::Application:
@@ -325,6 +327,8 @@ Resources:
       CodeUri: login_handler/
       Handler: app.handler
       Runtime: python3.12
+      Layers:
+        - !Ref LibLayer
       Environment:
         Variables:
           CLIENT_ID: !Ref UserPoolClient

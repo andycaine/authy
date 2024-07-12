@@ -28,23 +28,14 @@ Authy:
 To implement your policy decision point, you need to provide a `pdp` module with a `check_authz(event, id_attrs)` function. `event` is the standard API Gateway V2 (HTTP API) event, and `id_attrs` is a dict containing `user`, `groups` and `name` attributes extracted from the claims in the JWT. Your authorisation code can make use of these parameters to allow or deny access. Here's an example `pdp.py`:
 
 ```python
-import logging
-
-logger = logging.getLogger(__name__)
-
-
-def check_authz(event, session):
+def check_authz(request, session):
     if 'Admins' in session.groups:
         return True, {}
 
-    http = event['requestContext']['http']
-    path = http['path']
-
     if 'BlogAdmins' in session.groups:
-        if path.startswith('/blog/'):
+        if request.path.startswith('/blog/'):
             return True, {}
 
-    logger.info('No rules matched, access denied')
     return False, {}
 ```
 

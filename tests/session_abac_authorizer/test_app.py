@@ -6,6 +6,8 @@ import moto
 import pytest
 import freezegun
 
+import httplambda
+
 
 inactivity_timeout_mins = 60
 session_timeout_mins = 120
@@ -44,10 +46,15 @@ def origin_key_header(key):
 
 
 def request_event(cookies=[], headers=origin_key_header(custom_origin_key)):
-    return dict(
-        cookies=cookies,
-        headers=headers,
-    )
+    return {
+        'cookies': cookies,
+        'headers': headers,
+        'requestContext': {
+            'http': {
+                'path': '/test'
+            }
+        }
+    }
 
 
 @pytest.fixture
@@ -67,7 +74,7 @@ def test_active_session(app, active_session, request_for_active_session,
         'context': {
             'groups': active_session.groups,
             'name': active_session.name,
-            'email': active_session.email
+            'username': active_session.username
         }
     }
     expected_new_expires_at = int(time.time()) + inactivity_timeout_mins * 60
@@ -75,7 +82,8 @@ def test_active_session(app, active_session, request_for_active_session,
     assert session.expires_at == expected_new_expires_at
     active_session.expires_at = session.expires_at
 
-    mock_authorizer.assert_called_once_with(request_for_active_session,
+    expected_request = httplambda.make_request(request_for_active_session)
+    mock_authorizer.assert_called_once_with(expected_request,
                                             active_session)
 
 

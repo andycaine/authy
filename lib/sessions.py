@@ -17,7 +17,7 @@ class Database:
         item = result['Item']
         return Session(
             session_id=item['session_id'],
-            email=item['email'],
+            username=item['username'],
             name=item['name'],
             ip=item['ip'],
             user_agent=item['user_agent'],
@@ -51,14 +51,14 @@ class Database:
             }
         )
 
-    def create_session(self, email, ip, user_agent, duration_in_mins, groups,
-                       name):
+    def create_session(self, username, ip, user_agent, duration_in_mins,
+                       groups, name):
         session_id = secrets.token_hex(32)
         created_at = int(time.time())
         expires_at = int(created_at + duration_in_mins * 60)
         session = Session(
             session_id=session_id,
-            email=email,
+            username=username,
             ip=ip,
             name=name,
             groups=groups,
@@ -71,7 +71,7 @@ class Database:
             Item={
                 'pk': session.session_id,
                 'session_id': session.session_id,
-                'email': session.email,
+                'username': session.username,
                 'name': session.name,
                 'ip': session.ip,
                 'user_agent': session.user_agent,
@@ -90,7 +90,7 @@ class Database:
 @dataclasses.dataclass
 class Session:
     session_id: str
-    email: str
+    username: str
     name: str
     ip: str
     user_agent: str

@@ -1,5 +1,6 @@
 import datetime
 import sys
+import logging
 
 import pytest
 import boto3
@@ -10,6 +11,12 @@ import freezegun
 LIB_PATH = 'lib'
 if LIB_PATH not in sys.path:
     sys.path.insert(0, LIB_PATH)
+
+
+@pytest.fixture(autouse=True)
+def loginfo(caplog):
+    caplog.set_level(logging.INFO)
+    pass
 
 
 @pytest.fixture(autouse=True)
@@ -57,7 +64,7 @@ def sessiondb(aws_creds, sessions_table_name):
 def session_factory(sessiondb):
     def create_session(duration_in_mins=5):
         return sessiondb.create_session(
-            email='test@example.com',
+            username='test@example.com',
             ip='192.168.1.1',
             user_agent='fake-ua',
             duration_in_mins=duration_in_mins,

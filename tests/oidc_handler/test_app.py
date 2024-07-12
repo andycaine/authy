@@ -58,11 +58,11 @@ def app(set_env, mock_urlopen, sessiondb):
 def open_redirect():
     yield {
         'queryStringParameters': {
-            'state': 'test_state',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': 'test_code'
         },
         'cookies': [
-            'state=test_state',
+            'state=29332142a1b4d1e54db58a861c2e40a9',
             'code_verifier=test_code_verifier',
             'authy_next_path=https%3A%2F%2Fevil.com'
         ]
@@ -77,7 +77,7 @@ def empty_state_param():
             'code': 'test_code'
         },
         'cookies': [
-            'state=test_state',
+            'state=29332142a1b4d1e54db58a861c2e40a9',
             'code_verifier=test_code_verifier',
             'authy_next_path=%2Fnext%2Fpath'
         ]
@@ -91,7 +91,7 @@ def missing_state_param():
             'code': 'test_code'
         },
         'cookies': [
-            'state=test_state',
+            'state=29332142a1b4d1e54db58a861c2e40a9',
             'code_verifier=test_code_verifier',
             'authy_next_path=%2Fnext%2Fpath'
         ]
@@ -102,11 +102,11 @@ def missing_state_param():
 def valid_request_event():
     yield {
         'queryStringParameters': {
-            'state': 'test_state',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': 'test_code'
         },
         'cookies': [
-            'state=test_state',
+            'state=29332142a1b4d1e54db58a861c2e40a9',
             'code_verifier=test_code_verifier',
             'authy_next_path=%2Fnext%2Fpath'
         ],
@@ -125,11 +125,11 @@ def valid_request_event():
 def valid_request_event_with_session(active_session):
     yield {
         'queryStringParameters': {
-            'state': 'test_state',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': 'test_code'
         },
         'cookies': [
-            'state=test_state',
+            'state=29332142a1b4d1e54db58a861c2e40a9',
             'code_verifier=test_code_verifier',
             'authy_next_path=%2Fnext%2Fpath',
             f'__Host-authy_session_id={active_session.session_id}'
@@ -149,11 +149,11 @@ def valid_request_event_with_session(active_session):
 def valid_request_event_with_expired_session(expired_session):
     yield {
         'queryStringParameters': {
-            'state': 'test_state',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': 'test_code'
         },
         'cookies': [
-            'state=test_state',
+            'state=29332142a1b4d1e54db58a861c2e40a9',
             'code_verifier=test_code_verifier',
             'authy_next_path=%2Fnext%2Fpath',
             f'__Host-authy_session_id={expired_session.session_id}'
@@ -173,11 +173,11 @@ def valid_request_event_with_expired_session(expired_session):
 def empty_code_param():
     yield {
         'queryStringParameters': {
-            'state': 'test_state',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': ''
         },
         'cookies': [
-            'state=test_state',
+            'state=29332142a1b4d1e54db58a861c2e40a9',
             'code_verifier=test_code_verifier',
             'authy_next_path=%2Fnext%2Fpath'
         ]
@@ -188,11 +188,11 @@ def empty_code_param():
 def different_state_cookie_and_param():
     yield {
         'queryStringParameters': {
-            'state': 'foo',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': 'test_code'
         },
         'cookies': [
-            'state=bar',
+            'state=29332142a1b4d1e54db58a861c2e40a3',
             'code_verifier=test_code_verifier',
             'authy_next_path=%2Fnext%2Fpath'
         ]
@@ -203,10 +203,10 @@ def different_state_cookie_and_param():
 def missing_code_param():
     yield {
         'queryStringParameters': {
-            'state': 'state'
+            'state': '29332142a1b4d1e54db58a861c2e40a9'
         },
         'cookies': [
-            'state=state',
+            'state=29332142a1b4d1e54db58a861c2e40a9',
             'code_verifier=test_code_verifier',
             'authy_next_path=%2Fnext%2Fpath'
         ]
@@ -217,7 +217,7 @@ def missing_code_param():
 def no_cookies():
     yield {
         'queryStringParameters': {
-            'state': 'test_state',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': 'test_code'
         },
         'cookies': []
@@ -228,7 +228,7 @@ def no_cookies():
 def missing_state_cookie():
     yield {
         'queryStringParameters': {
-            'state': 'test_state',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': 'test_code'
         },
         'cookies': [
@@ -242,11 +242,11 @@ def missing_state_cookie():
 def missing_code_verifier_cookie():
     yield {
         'queryStringParameters': {
-            'state': 'test_state',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': 'test_code'
         },
         'cookies': [
-            'state=test_state',
+            'state=29332142a1b4d1e54db58a861c2e40a9',
             'authy_next_path=%2Fnext%2Fpath'
         ]
     }
@@ -256,7 +256,7 @@ def missing_code_verifier_cookie():
 def empty_state_cookie():
     yield {
         'queryStringParameters': {
-            'state': 'test_state',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': 'test_code'
         },
         'cookies': [
@@ -271,11 +271,11 @@ def empty_state_cookie():
 def empty_code_verifier_cookie():
     yield {
         'queryStringParameters': {
-            'state': 'test_state',
+            'state': '29332142a1b4d1e54db58a861c2e40a9',
             'code': 'test_code'
         },
         'cookies': [
-            'state=test_state',
+            'state=29332142a1b4d1e54db58a861c2e40a9',
             'code_verifier=',
             'authy_next_path=%2Fnext%2Fpath'
         ]
@@ -406,8 +406,8 @@ def assert_authenticated_response(response, session_id):
                               'must-revalidate, private')
         },
         'cookies': [
-            f'__Host-authy_session_id={session_id}; Path=/; HttpOnly; '
-            'Secure'
+            f'__Host-authy_session_id={session_id}; Path=/; SameSite=Strict; '
+            'HttpOnly; Secure'
         ],
         'body': ''
     }
@@ -423,7 +423,7 @@ def assert_valid_token_request(token_response_mock):
     assert request.body == 'grant_type=authorization_code' \
         '&client_id=2vh0abc7eh343nq67v2alno0k7' \
         f'&redirect_uri={redirect_uri}&code=test_code' \
-        f'&state=test_state' \
+        f'&state=29332142a1b4d1e54db58a861c2e40a9' \
         f'&code_verifier=test_code_verifier'
 
 
@@ -435,7 +435,7 @@ def test_handle_valid_request(app, valid_request_event, mock_token_hex,
 
     # no session id in request so a new one should have been created
     session = sessiondb.get_session(mock_token_hex())
-    assert session.email == 'test@example.com'
+    assert session.username == 'test@example.com'
 
     assert_valid_token_request(valid_id_token_response)
 
@@ -470,7 +470,7 @@ def test_handle_valid_request_with_expired_session(
 
     # session was expired so the response should have a new session
     assert_authenticated_response(response, mock_token_hex())
-    assert sessiondb.get_session(mock_token_hex()).email == \
+    assert sessiondb.get_session(mock_token_hex()).username == \
         'test@example.com'
 
     assert_valid_token_request(valid_id_token_response)

@@ -3,9 +3,12 @@ import os
 import re
 
 import sessions
+import vocab
+import httplambda
 
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
+
+vocab.configure(context_fn=httplambda.logging_context)
+logger = logging.getLogger('authy.session_abac_authorizer')
 
 
 def denyall_authz(*_):
@@ -26,46 +29,45 @@ session_timeout = int(os.environ['SESSION_TIMEOUT_MINS'])
 sessionsdb = sessions.Database(os.environ['SESSIONS_TABLE_NAME'])
 
 
-def get_session_id(event):
-    cookie_strings = event.get('cookies', [])
-    cookies = {k: v for k, v in (s.split('=') for s in cookie_strings)}
-    return cookies.get('__Host-authy_session_id', None)
+def get_session_id(request):
+    return request.cookies.get('__Host-authy_session_id', None)
 
 
-def get_origin_key_header(event):
-    return event.get('headers', {}).get('x-custom-origin-key', '')
+def get_origin_key_header(request):
+    return request.headers.get('x-custom-origin-key', '')
 
 
 def raise_401():
     raise Exception('Unauthorized')  # Return a 401 Unauthorized response
 
 
-def handler(event, _):
+@httplambda.route
+def handler(request):
     response = {
         'isAuthorized': False,
         'context': {}
     }
 
-    origin_key_value = get_origin_key_header(event)
+    origin_key_value = get_origin_key_header(request)
     if not origin_key:
         logger.warning('No Origin Key configured - unable to enforce access '
                        'via CloudFront')
     elif origin_key_value != origin_key:
-        logger.info(f'Invalid Origin Key - unauthorised: <{origin_key_value}>')
+        logger.malicious_proxy_bypass()
         return response
 
-    session_id = get_session_id(event)
+    session_id = get_session_id(request)
     if not session_id:
         logger.info('No session cookie - unauthorised (401)')
         raise_401()
 
     if not re.match(r'^[a-f0-9]{64}+$', session_id):
-        logger.info('Invalid session ID - unauthorised (401)')
+        logger.input_validation_fail('session_id', 'anonymous')
         raise_401()
 
     session = sessionsdb.get_session(session_id)
     if not session:
-        logger.info('No session - unauthorised (401)')
+        logger.info('No session in db - unauthorised (401)')
         raise_401()
 
     if session.expired():
@@ -78,13 +80,15 @@ def handler(event, _):
 
     logger.info('Active session found')
 
-    is_authz, _ = _authoriser(event, session)
-    logger.info(f'Authorisation check returned {is_authz}')
+    is_authz, _ = _authoriser(request, session)
+
+    if not is_authz:
+        logger.authz_fail(session.username, request.path)
 
     response.update({
         'isAuthorized': is_authz,
         'context': dict(
-            email=session.email,
+            username=session.username,
             groups=session.groups,
             name=session.name
         )

@@ -1,12 +1,10 @@
 import os
 import datetime
-import logging
 import urllib.parse
 import re
 
 import sessions
 
-logger = logging.getLogger()
 
 logout_path = os.environ.get('LOGOUT_PATH')
 client_id = os.environ.get('CLIENT_ID')
