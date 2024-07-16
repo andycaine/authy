@@ -224,6 +224,8 @@ Resources:
         - email
       UsernameConfiguration:
         CaseSensitive: false
+      UserPoolAddOns:
+        AdvancedSecurityMode: ENFORCED
       VerificationMessageTemplate:
         DefaultEmailOption: CONFIRM_WITH_CODE
         EmailMessage: The verification code to your new account is {####}
