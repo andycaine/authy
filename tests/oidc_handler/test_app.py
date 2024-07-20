@@ -291,8 +291,8 @@ def valid_state():
 
 @pytest.fixture
 def valid_state_hash():
-    # sha256 of valid_state
-    yield '95aa7ba01f07aef6c53e73bdc5281fbd91d50042056aac284f305952bc846bc3'
+    # sha256 of valid_state as bytes
+    yield 'd6ae3cc04fdc55ffedf92930b51b1839a4624a0ba459ee102218730406798623'
 
 
 @pytest.fixture

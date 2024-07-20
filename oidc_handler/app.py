@@ -96,7 +96,7 @@ def handler(request):
         logger.authn_oidc_flow_invalid_state('cookie', state_param)
         return httplambda.bad_request()
 
-    if hashlib.sha256(state_cookie.encode('utf-8')).hexdigest() != state_param:
+    if hashlib.sha256(bytes.fromhex(state_cookie)).hexdigest() != state_param:
         logger.authn_oidc_flow_incorrect_state(state_param)
         return httplambda.bad_request()
 
