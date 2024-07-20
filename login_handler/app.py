@@ -1,6 +1,7 @@
+import hashlib
 import os
-import secrets
 import logging
+import secrets
 import urllib.parse
 
 import pkce
@@ -26,10 +27,6 @@ oidc_callback_url = urllib.parse.quote_plus(build_url(cf_domain,
 oidcEndpoint = build_url(auth_domain, '')
 
 
-def generate_random_string(length):
-    return secrets.token_hex(length // 2)
-
-
 @httplambda.route
 def handler(request):
     next_path = urllib.parse.unquote_plus(
@@ -43,12 +40,13 @@ def handler(request):
     # Send a redirect to the IdP's login page, after storing state and the
     # code verifier in cookies so that they can be used to validate the
     # callback
-    state = generate_random_string(32)
+    state = secrets.token_bytes(32)
+    state_sha256 = hashlib.sha256(state).hexdigest()
     code_verifier, code_challenge = pkce.generate_pkce_pair()
 
     redirect_url = (
         f"{oidcEndpoint}/login?client_id={client_id}"
-        f"&response_type=code&state={state}&code_challenge_method=S256"
+        f"&response_type=code&state={state_sha256}&code_challenge_method=S256"
         f"&code_challenge={code_challenge}&redirect_uri={oidc_callback_url}"
     )
 
@@ -60,7 +58,7 @@ def handler(request):
                               'must-revalidate, private')
         },
         'cookies': [
-            f"state={state}; HttpOnly; Secure",
+            f"state={state.hex()}; HttpOnly; Secure",
             f"code_verifier={code_verifier}; HttpOnly; Secure",
             f"authy_next_path={next_path}; HttpOnly; Secure",
         ],

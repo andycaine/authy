@@ -1,3 +1,4 @@
+import hashlib
 import os
 from http.cookies import SimpleCookie
 import requests
@@ -41,20 +42,21 @@ oidc_callback_url = build_url(cf_domain, oidc_callback_path),
 oidc_endpoint = build_url(auth_domain, '')
 
 
-def parse_cookies(cookie_strings):
-    result = {}
-    for cookie_string in cookie_strings:
-        cookie = SimpleCookie()
-        cookie.load(cookie_string)
-        result.update({key: cookie[key].value for key in cookie})
-    return result
+#def parse_cookies(cookie_strings):
+#    result = {}
+#    for cookie_string in cookie_strings:
+#        cookie = SimpleCookie()
+#        cookie.load(cookie_string)
+#        result.update({key: cookie[key].value for key in cookie})
+#    return result
 
 
 def _decode(token):
     signing_key = jwks_client.get_signing_key_from_jwt(token)
     try:
         claims = jwt.decode(token, signing_key.key, audience=client_id,
-                            algorithms=["RS256"], options={'require': ['email']})
+                            algorithms=["RS256"],
+                            options={'require': ['email']})
         return claims
     except jwt.exceptions.InvalidSignatureError:
         logger.authn_oidc_flow_invalid_signature()
@@ -83,19 +85,19 @@ def _decode(token):
 def handler(request):
     state_param = request.args.get('state', '')
 
-    if not re.match(r'^[0-9a-f]{32}$', state_param):
+    if not re.match(r'^[0-9a-f]{64}$', state_param):
         logger.authn_oidc_flow_invalid_state('param', state_param)
         return httplambda.bad_request()
 
     cookies = request.cookies
     state_cookie = cookies.get('state', '')
 
-    if not re.match(r'^[0-9a-f]{32}$', state_cookie):
+    if not re.match(r'^[0-9a-f]{64}$', state_cookie):
         logger.authn_oidc_flow_invalid_state('cookie', state_param)
         return httplambda.bad_request()
 
-    if state_param != state_cookie:
-        logger.authn_oidc_flow_state_mismatch(state_param, state_cookie)
+    if hashlib.sha256(state_cookie.encode('utf-8')).hexdigest() != state_param:
+        logger.authn_oidc_flow_incorrect_state(state_param)
         return httplambda.bad_request()
 
     code_param = request.args.get('code', '')

@@ -13,7 +13,7 @@ def envvars(monkeypatch, sessions_table_name):
 
 
 @pytest.fixture
-def app(envvars, sessiondb):
+def app(envvars, sessiondb, mock_token_bytes):
     from login_handler import app
     yield app
 
@@ -45,20 +45,37 @@ def mock_pkce():
 
 
 @pytest.fixture
-def mock_token_hex():
-    with unittest.mock.patch('secrets.token_hex') as mock:
-        mock.return_value = 'test_token_hex'
+def state_bytes():
+    return (b'I\xbdA\x9e\xea\x91\x94\xaaG]\x83\x18\xf5\xae\xee.\xd3\xdda\xc0'
+            b'w\xe7\xc0\x82\xd4\xa6\x87\x1e\xc0p\xd2I')
+
+
+@pytest.fixture
+def state():
+    return '49bd419eea9194aa475d8318f5aeee2ed3dd61c077e7c082d4a6871ec070d249'
+
+
+@pytest.fixture
+def state_hash():
+    return '3fe24d16472fbb9893910479522a5a4eac0b593ae84c8e40b8afdee278039563'
+
+
+@pytest.fixture
+def mock_token_bytes(state_bytes):
+    with unittest.mock.patch('secrets.token_bytes') as mock:
+        mock.return_value = state_bytes
         yield mock
 
 
 def assert_login_redirect(response, next_path, code_verifier, state,
-                          code_challenge):
+                          code_challenge, state_hash):
     assert response == {
         'statusCode': 302,
         'headers': {
             'Location': (
                 'https://auth.test.com/login?client_id=test_client_id'
-                f'&response_type=code&state={state}&code_challenge_method=S256'
+                f'&response_type=code&state={state_hash}'
+                '&code_challenge_method=S256'
                 f'&code_challenge={code_challenge}'
                 '&redirect_uri=https%3A%2F%2Fadmin.test.com%2Fauth%2Foidc'),
             'Cache-Control': ('max-age=0, no-cache, no-store, '
@@ -73,17 +90,15 @@ def assert_login_redirect(response, next_path, code_verifier, state,
     }
 
 
-def test_login(app, mock_pkce, mock_token_hex):
-    state = mock_token_hex()
+def test_login(app, mock_pkce, state, state_hash):
     code_verifier, code_challenge = mock_pkce()
     next_path = '/'
     response = app.handler({}, {})
     assert_login_redirect(response, next_path, code_verifier, state,
-                          code_challenge)
+                          code_challenge, state_hash)
 
 
-def test_login_with_next_path(app, mock_pkce, mock_token_hex):
-    state = mock_token_hex()
+def test_login_with_next_path(app, mock_pkce, state, state_hash):
     code_verifier, code_challenge = mock_pkce()
     next_path = '/admin/'
     response = app.handler({
@@ -91,7 +106,7 @@ def test_login_with_next_path(app, mock_pkce, mock_token_hex):
         {}
     )
     assert_login_redirect(response, next_path, code_verifier, state,
-                          code_challenge)
+                          code_challenge, state_hash)
 
 
 def test_login_with_evil_next_path(app):

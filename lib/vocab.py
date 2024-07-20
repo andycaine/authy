@@ -42,11 +42,10 @@ class VocabularyLogger(logging.Logger):
             .replace(microsecond=0).isoformat()
         self.log(level, description, extra=extra)
 
-    def authn_oidc_flow_state_mismatch(self, state_param, state_cookie):
+    def authn_oidc_flow_incorrect_state(self, state_param):
         self.__log_event(
-            f'authn_oidc_flow_state_mismatch:{state_param},{state_cookie}',
-            f'State param <{state_param}> and state cookie <{state_cookie}> '
-            'did not match during OIDC flow'
+            f'authn_oidc_flow_incorrect_state:{state_param}',
+            f'State param <{state_param}> was incorrect during OIDC flow'
         )
 
     def authn_oidc_flow_invalid_state(self, source, state):
