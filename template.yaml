@@ -58,11 +58,15 @@ Parameters:
     Default: '480'
     MinValue: '1'
     Description: The session timeout in minutes.
+  LogGroup:
+    Type: String
+    Description: The CloudWatch log group to use
 Globals:
   Function:
     Timeout: 3
     LoggingConfig:
       LogFormat: JSON
+      LogGroup: !Ref LogGroup
 
 Metadata:
   AWS::ServerlessRepo::Application:

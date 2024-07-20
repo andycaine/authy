@@ -26,6 +26,12 @@ Globals:
 
 Resources:
 
+  LogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /admin-app
+      RetentionInDays: 1
+
   AdminEndpoint:
     Type: AWS::Serverless::HttpApi
     Properties:
