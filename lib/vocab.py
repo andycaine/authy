@@ -166,7 +166,6 @@ class VocabularyLogger(logging.Logger):
         )
 
 
-
 def configure(context_fn):
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(JsonFormatter([
