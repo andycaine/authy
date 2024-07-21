@@ -1,6 +1,5 @@
 import hashlib
 import os
-from http.cookies import SimpleCookie
 import requests
 import re
 import logging
@@ -11,6 +10,7 @@ import jwt
 import sessions
 import httplambda
 import vocab
+import s256
 
 
 vocab.configure(context_fn=httplambda.logging_context)
@@ -40,15 +40,6 @@ def build_url(domain, path):
 
 oidc_callback_url = build_url(cf_domain, oidc_callback_path),
 oidc_endpoint = build_url(auth_domain, '')
-
-
-#def parse_cookies(cookie_strings):
-#    result = {}
-#    for cookie_string in cookie_strings:
-#        cookie = SimpleCookie()
-#        cookie.load(cookie_string)
-#        result.update({key: cookie[key].value for key in cookie})
-#    return result
 
 
 def _decode(token):
@@ -81,33 +72,37 @@ def _decode(token):
     return None
 
 
+def _is_256_bit_urlsafe_b64(s):
+    return False if not s else re.match(r'^[A-Za-z0-9_-]{43}$', s)
+
+
 @httplambda.route
 def handler(request):
     state_param = request.args.get('state', '')
 
-    if not re.match(r'^[0-9a-f]{64}$', state_param):
-        logger.authn_oidc_flow_invalid_state('param', state_param)
+    if not _is_256_bit_urlsafe_b64(state_param):
+        logger.input_validation_fail('state')
         return httplambda.bad_request()
 
     cookies = request.cookies
     state_cookie = cookies.get('state', '')
 
-    if not re.match(r'^[0-9a-f]{64}$', state_cookie):
-        logger.authn_oidc_flow_invalid_state('cookie', state_param)
+    if not _is_256_bit_urlsafe_b64(state_cookie):
+        logger.input_validation_fail('state_cookie')
         return httplambda.bad_request()
 
-    if hashlib.sha256(bytes.fromhex(state_cookie)).hexdigest() != state_param:
+    if not s256.match(state_cookie, state_param):
         logger.authn_oidc_flow_incorrect_state(state_param)
         return httplambda.bad_request()
 
     code_param = request.args.get('code', '')
     if not code_param:
-        logger.authn_oidc_flow_missing_code_param()
+        logger.input_validation_fail('code')
         return httplambda.bad_request()
 
     code_verifier = cookies.get('code_verifier')
-    if not code_verifier:
-        logger.authn_oidc_flow_missing_code_verifer_cookie()
+    if not _is_256_bit_urlsafe_b64(code_verifier):
+        logger.input_validation_fail('code_verifier')
         return httplambda.bad_request()
 
     next_path = urllib.parse.unquote_plus(cookies.get('authy_next_path', '/'))

@@ -55,7 +55,7 @@ def app(set_env, mock_urlopen, sessiondb):
 
 
 @pytest.fixture
-def open_redirect(valid_state, valid_state_hash):
+def open_redirect(valid_state, valid_state_hash, valid_code_verifier):
     yield {
         'queryStringParameters': {
             'state': valid_state_hash,
@@ -63,14 +63,14 @@ def open_redirect(valid_state, valid_state_hash):
         },
         'cookies': [
             f'state={valid_state}',
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=https%3A%2F%2Fevil.com'
         ]
     }
 
 
 @pytest.fixture
-def empty_state_param(valid_state):
+def empty_state_param(valid_state, valid_code_verifier):
     yield {
         'queryStringParameters': {
             'state': '',
@@ -78,28 +78,28 @@ def empty_state_param(valid_state):
         },
         'cookies': [
             f'state={valid_state}',
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=%2Fnext%2Fpath'
         ]
     }
 
 
 @pytest.fixture
-def missing_state_param(valid_state):
+def missing_state_param(valid_state, valid_code_verifier):
     yield {
         'queryStringParameters': {
             'code': 'test_code'
         },
         'cookies': [
             f'state={valid_state}',
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=%2Fnext%2Fpath'
         ]
     }
 
 
 @pytest.fixture
-def valid_request_event(valid_state, valid_state_hash):
+def valid_request_event(valid_state, valid_state_hash, valid_code_verifier):
     yield {
         'queryStringParameters': {
             'state': valid_state_hash,
@@ -107,7 +107,7 @@ def valid_request_event(valid_state, valid_state_hash):
         },
         'cookies': [
             f'state={valid_state}',
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=%2Fnext%2Fpath'
         ],
         'requestContext': {
@@ -123,7 +123,7 @@ def valid_request_event(valid_state, valid_state_hash):
 
 @pytest.fixture
 def valid_request_event_with_session(active_session, valid_state,
-                                     valid_state_hash):
+                                     valid_state_hash, valid_code_verifier):
     yield {
         'queryStringParameters': {
             'state': valid_state_hash,
@@ -131,7 +131,7 @@ def valid_request_event_with_session(active_session, valid_state,
         },
         'cookies': [
             f'state={valid_state}',
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=%2Fnext%2Fpath',
             f'__Host-authy_session_id={active_session.session_id}'
         ],
@@ -148,7 +148,8 @@ def valid_request_event_with_session(active_session, valid_state,
 
 @pytest.fixture
 def valid_request_event_with_expired_session(expired_session, valid_state,
-                                             valid_state_hash):
+                                             valid_state_hash,
+                                             valid_code_verifier):
     yield {
         'queryStringParameters': {
             'state': valid_state_hash,
@@ -156,7 +157,7 @@ def valid_request_event_with_expired_session(expired_session, valid_state,
         },
         'cookies': [
             f'state={valid_state}',
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=%2Fnext%2Fpath',
             f'__Host-authy_session_id={expired_session.session_id}'
         ],
@@ -172,7 +173,7 @@ def valid_request_event_with_expired_session(expired_session, valid_state,
 
 
 @pytest.fixture
-def empty_code_param(valid_state_hash, valid_state):
+def empty_code_param(valid_state_hash, valid_state, valid_code_verifier):
     yield {
         'queryStringParameters': {
             'state': valid_state_hash,
@@ -180,14 +181,14 @@ def empty_code_param(valid_state_hash, valid_state):
         },
         'cookies': [
             f'state={valid_state}',
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=%2Fnext%2Fpath'
         ]
     }
 
 
 @pytest.fixture
-def incorrect_state_hash_event(valid_state, incorrect_state_hash):
+def incorrect_state_hash_event(valid_state, incorrect_state_hash, valid_code_verifier):
     yield {
         'queryStringParameters': {
             'state': incorrect_state_hash,
@@ -195,21 +196,21 @@ def incorrect_state_hash_event(valid_state, incorrect_state_hash):
         },
         'cookies': [
             f'state={valid_state}',
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=%2Fnext%2Fpath'
         ]
     }
 
 
 @pytest.fixture
-def missing_code_param(valid_state_hash, valid_state):
+def missing_code_param(valid_state_hash, valid_state, valid_code_verifier):
     yield {
         'queryStringParameters': {
             'state': valid_state_hash,
         },
         'cookies': [
             f'state={valid_state}',
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=%2Fnext%2Fpath'
         ]
     }
@@ -227,14 +228,14 @@ def no_cookies(valid_state_hash):
 
 
 @pytest.fixture
-def missing_state_cookie(valid_state_hash):
+def missing_state_cookie(valid_state_hash, valid_code_verifier):
     yield {
         'queryStringParameters': {
             'state': valid_state_hash,
             'code': 'test_code'
         },
         'cookies': [
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=%2Fnext%2Fpath'
         ]
     }
@@ -255,7 +256,7 @@ def missing_code_verifier_cookie(valid_state_hash, valid_state):
 
 
 @pytest.fixture
-def empty_state_cookie(valid_state_hash):
+def empty_state_cookie(valid_state_hash, valid_code_verifier):
     yield {
         'queryStringParameters': {
             'state': valid_state_hash,
@@ -263,7 +264,7 @@ def empty_state_cookie(valid_state_hash):
         },
         'cookies': [
             'state=',
-            'code_verifier=test_code_verifier',
+            f'code_verifier={valid_code_verifier}',
             'authy_next_path=%2Fnext%2Fpath'
         ]
     }
@@ -286,18 +287,22 @@ def empty_code_verifier_cookie(valid_state, valid_state_hash):
 
 @pytest.fixture
 def valid_state():
-    yield '6782477742f2690771cfca18364e2fdbb1c7d26168f76315968966de9a43b792'
+    yield '5mrYE6Chaf_-yIrf87lzxKEz0XlhGuYHj2udV9Gw2SQ'
+
+
+@pytest.fixture
+def valid_code_verifier():
+    yield '1NWbk_YYnhmbzgmNz7hUlUGSEcSeE-qqxs1r86ysYOo'
 
 
 @pytest.fixture
 def valid_state_hash():
-    # sha256 of valid_state as bytes
-    yield 'd6ae3cc04fdc55ffedf92930b51b1839a4624a0ba459ee102218730406798623'
+    yield 'ysEPnUrayvMY6NjGFl5QbD-R4ndmgLrk8iG9NLNUPKU'
 
 
 @pytest.fixture
 def incorrect_state_hash():
-    yield 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+    yield 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
 
 
 @contextlib.contextmanager
@@ -431,7 +436,8 @@ def assert_authenticated_response(response, session_id):
     }
 
 
-def assert_valid_token_request(token_response_mock, valid_state_hash):
+def assert_valid_token_request(token_response_mock, valid_state_hash,
+                               valid_code_verifier):
     assert len(token_response_mock.calls) == 1
     request = token_response_mock.calls[0].request
     assert request.url == f'https://{auth_domain}/oauth2/token'
@@ -442,12 +448,12 @@ def assert_valid_token_request(token_response_mock, valid_state_hash):
         '&client_id=2vh0abc7eh343nq67v2alno0k7' \
         f'&redirect_uri={redirect_uri}&code=test_code' \
         f'&state={valid_state_hash}' \
-        '&code_verifier=test_code_verifier'
+        f'&code_verifier={valid_code_verifier}'
 
 
 def test_handle_valid_request(app, valid_request_event, mock_token_hex,
                               valid_id_token_response, sessiondb,
-                              valid_state_hash):
+                              valid_state_hash, valid_code_verifier):
 
     response = app.handler(valid_request_event, {})
     assert_authenticated_response(response, mock_token_hex())
@@ -456,12 +462,14 @@ def test_handle_valid_request(app, valid_request_event, mock_token_hex,
     session = sessiondb.get_session(mock_token_hex())
     assert session.username == 'test@example.com'
 
-    assert_valid_token_request(valid_id_token_response, valid_state_hash)
+    assert_valid_token_request(valid_id_token_response, valid_state_hash,
+                               valid_code_verifier)
 
 
 def test_handle_valid_request_with_existing_session(
     app, valid_request_event_with_session, valid_id_token_response,
-    sessiondb, active_session, mock_token_hex, valid_state_hash
+    sessiondb, active_session, mock_token_hex, valid_state_hash,
+    valid_code_verifier
 ):
     response = app.handler(valid_request_event_with_session, {})
 
@@ -478,12 +486,14 @@ def test_handle_valid_request_with_existing_session(
     assert updated_session.expires_at > \
         active_session.expires_at
 
-    assert_valid_token_request(valid_id_token_response, valid_state_hash)
+    assert_valid_token_request(valid_id_token_response, valid_state_hash,
+                               valid_code_verifier)
 
 
 def test_handle_valid_request_with_expired_session(
     app, valid_request_event_with_expired_session, sessiondb,
-    mock_token_hex, valid_id_token_response, valid_state_hash
+    mock_token_hex, valid_id_token_response, valid_state_hash,
+    valid_code_verifier
 ):
     response = app.handler(valid_request_event_with_expired_session, {})
 
@@ -492,12 +502,13 @@ def test_handle_valid_request_with_expired_session(
     assert sessiondb.get_session(mock_token_hex()).username == \
         'test@example.com'
 
-    assert_valid_token_request(valid_id_token_response, valid_state_hash)
+    assert_valid_token_request(valid_id_token_response, valid_state_hash,
+                               valid_code_verifier)
 
 
 def test_handle_valid_request_expired_token(
         app, valid_request_event, sessiondb, expired_id_token_response,
-        valid_state_hash
+        valid_state_hash, valid_code_verifier
 ):
     response = app.handler(valid_request_event, {})
     assert response == {
@@ -507,12 +518,13 @@ def test_handle_valid_request_expired_token(
     session = sessiondb.get_session('mock_token_hex')
     assert session is None
 
-    assert_valid_token_request(expired_id_token_response, valid_state_hash)
+    assert_valid_token_request(expired_id_token_response, valid_state_hash,
+                               valid_code_verifier)
 
 
 def test_handle_valid_request_tampered_token(
         app, valid_request_event, sessiondb, tampered_id_token_response,
-        valid_state_hash
+        valid_state_hash, valid_code_verifier
 ):
     response = app.handler(valid_request_event, {})
     assert response == {
@@ -522,7 +534,8 @@ def test_handle_valid_request_tampered_token(
     session = sessiondb.get_session('mock_token_hex')
     assert session is None
 
-    assert_valid_token_request(tampered_id_token_response, valid_state_hash)
+    assert_valid_token_request(tampered_id_token_response, valid_state_hash,
+                               valid_code_verifier)
 
 
 @responses.activate

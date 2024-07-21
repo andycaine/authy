@@ -12,7 +12,6 @@ jmespath==1.0.1
 MarkupSafe==2.1.5
 moto==5.0.9
 packaging==24.0
-pkce==1.0.3
 pluggy==1.5.0
 pycparser==2.22
 PyJWT==2.8.0

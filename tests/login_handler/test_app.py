@@ -13,7 +13,7 @@ def envvars(monkeypatch, sessions_table_name):
 
 
 @pytest.fixture
-def app(envvars, sessiondb, mock_token_bytes):
+def app(envvars, sessiondb, mock_token_urlsafe):
     from login_handler import app
     yield app
 
@@ -38,33 +38,40 @@ def request_with_invalid_session_id():
 
 
 @pytest.fixture
-def mock_pkce():
-    with unittest.mock.patch('pkce.generate_pkce_pair') as mock:
-        mock.return_value = ('code_verifier', 'code_challenge')
+def token_urlsafe():
+    return '5mrYE6Chaf_-yIrf87lzxKEz0XlhGuYHj2udV9Gw2SQ'
+
+
+@pytest.fixture
+def token_urlsafe_s256():
+    return 'ysEPnUrayvMY6NjGFl5QbD-R4ndmgLrk8iG9NLNUPKU'
+
+
+@pytest.fixture
+def mock_token_urlsafe(token_urlsafe):
+    with unittest.mock.patch('secrets.token_urlsafe') as mock:
+        mock.return_value = token_urlsafe
         yield mock
 
 
 @pytest.fixture
-def state_bytes():
-    return (b'I\xbdA\x9e\xea\x91\x94\xaaG]\x83\x18\xf5\xae\xee.\xd3\xdda\xc0'
-            b'w\xe7\xc0\x82\xd4\xa6\x87\x1e\xc0p\xd2I')
+def state(token_urlsafe):
+    return token_urlsafe
 
 
 @pytest.fixture
-def state():
-    return '49bd419eea9194aa475d8318f5aeee2ed3dd61c077e7c082d4a6871ec070d249'
+def state_hash(token_urlsafe_s256):
+    return token_urlsafe_s256
 
 
 @pytest.fixture
-def state_hash():
-    return '3fe24d16472fbb9893910479522a5a4eac0b593ae84c8e40b8afdee278039563'
+def code_verifier(token_urlsafe):
+    return token_urlsafe
 
 
 @pytest.fixture
-def mock_token_bytes(state_bytes):
-    with unittest.mock.patch('secrets.token_bytes') as mock:
-        mock.return_value = state_bytes
-        yield mock
+def code_challenge(token_urlsafe_s256):
+    return token_urlsafe_s256
 
 
 def assert_login_redirect(response, next_path, code_verifier, state,
@@ -90,16 +97,15 @@ def assert_login_redirect(response, next_path, code_verifier, state,
     }
 
 
-def test_login(app, mock_pkce, state, state_hash):
-    code_verifier, code_challenge = mock_pkce()
+def test_login(app, state, state_hash, code_verifier, code_challenge):
     next_path = '/'
     response = app.handler({}, {})
     assert_login_redirect(response, next_path, code_verifier, state,
                           code_challenge, state_hash)
 
 
-def test_login_with_next_path(app, mock_pkce, state, state_hash):
-    code_verifier, code_challenge = mock_pkce()
+def test_login_with_next_path(app, state, state_hash, code_verifier,
+                              code_challenge):
     next_path = '/admin/'
     response = app.handler({
         'queryStringParameters': {'next': urllib.parse.quote_plus(next_path)}},

@@ -48,25 +48,6 @@ class VocabularyLogger(logging.Logger):
             f'State param <{state_param}> was incorrect during OIDC flow'
         )
 
-    def authn_oidc_flow_invalid_state(self, source, state):
-        self.__log_event(
-            f'authn_oidc_flow_invalid_state:{source},{state}',
-            f'Invalid state <{state}> provided from <{source}> '
-            'during OIDC flow'
-        )
-
-    def authn_oidc_flow_missing_code_verifer_cookie(self):
-        self.__log_event(
-            'authn_oidc_flow_missing_code_verifer_cookie',
-            'OIDC call back recieved without code_verifier cookie'
-        )
-
-    def authn_oidc_flow_missing_code_param(self):
-        self.__log_event(
-            'authn_oidc_flow_missing_code_param',
-            'OIDC call back recieved without code param'
-        )
-
     def authn_oidc_flow_invalid_signature(self):
         self.__log_event(
             'authn_oidc_flow_invalid_signature',
@@ -140,7 +121,7 @@ class VocabularyLogger(logging.Logger):
             'entitlement'
         )
 
-    def input_validation_fail(self, field, username):
+    def input_validation_fail(self, field, username='anonymous'):
         self.__log_event(
             f'input_validation_fail:{field},{username}',
             f'User {username} submitted data that failed validation'

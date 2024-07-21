@@ -1,13 +1,10 @@
-import hashlib
 import os
 import logging
-import secrets
 import urllib.parse
-
-import pkce
 
 import vocab
 import httplambda
+import s256
 
 vocab.configure(context_fn=httplambda.logging_context)
 logger = logging.getLogger('authy.login_handler')
@@ -40,9 +37,8 @@ def handler(request):
     # Send a redirect to the IdP's login page, after storing state and the
     # code verifier in cookies so that they can be used to validate the
     # callback
-    state = secrets.token_bytes(32)
-    state_sha256 = hashlib.sha256(state).hexdigest()
-    code_verifier, code_challenge = pkce.generate_pkce_pair()
+    state, state_sha256 = s256.pair()
+    code_verifier, code_challenge = s256.pair()
 
     redirect_url = (
         f"{oidcEndpoint}/login?client_id={client_id}"
@@ -58,7 +54,7 @@ def handler(request):
                               'must-revalidate, private')
         },
         'cookies': [
-            f"state={state.hex()}; HttpOnly; Secure",
+            f"state={state}; HttpOnly; Secure",
             f"code_verifier={code_verifier}; HttpOnly; Secure",
             f"authy_next_path={next_path}; HttpOnly; Secure",
         ],
