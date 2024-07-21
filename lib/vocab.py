@@ -42,64 +42,16 @@ class VocabularyLogger(logging.Logger):
             .replace(microsecond=0).isoformat()
         self.log(level, description, extra=extra)
 
-    def authn_oidc_flow_incorrect_state(self, state_param):
+    def oidc_flow_fail(self, e):
         self.__log_event(
-            f'authn_oidc_flow_incorrect_state:{state_param}',
-            f'State param <{state_param}> was incorrect during OIDC flow'
+            'oidc_flow_fail',
+            f'OIDC flow failed with error: {e}'
         )
 
-    def authn_oidc_flow_invalid_signature(self):
+    def oidc_flow_success(self, username):
         self.__log_event(
-            'authn_oidc_flow_invalid_signature',
-            'OIDC token endpoint returned a JWT with an invalid signature'
-        )
-
-    def authn_oidc_flow_expired_signature(self):
-        self.__log_event(
-            'authn_oidc_flow_expired_signature',
-            'OIDC token endpoint returned a JWT with an expired signature'
-        )
-
-    def authn_oidc_flow_invalid_audience(self):
-        self.__log_event(
-            'authn_oidc_flow_invalid_audience',
-            'OIDC token endpoint returned a JWT with an invalid audience'
-        )
-
-    def authn_oidc_flow_invalid_issuer(self):
-        self.__log_event(
-            'authn_oidc_flow_invalid_issuer',
-            'OIDC token endpoint returned a JWT with an invalid issuer'
-        )
-
-    def authn_oidc_flow_invalid_issued_at(self):
-        self.__log_event(
-            'authn_oidc_flow_invalid_issued_at',
-            'OIDC token endpoint returned a JWT with an iat in the future'
-        )
-
-    def authn_oidc_flow_immature_signature(self):
-        self.__log_event(
-            'authn_oidc_flow_immature_signature',
-            'OIDC token endpoint returned a JWT with a nbf in the future'
-        )
-
-    def authn_oidc_flow_invalid_signing_key(self):
-        self.__log_event(
-            'authn_oidc_flow_invalid_signing_key',
-            'OIDC token endpoint returned a JWT with an invalid key'
-        )
-
-    def authn_oidc_flow_invalid_token(self):
-        self.__log_event(
-            'authn_oidc_flow_invalid_token',
-            'OIDC token endpoint returned an invalid JWT'
-        )
-
-    def authn_oidc_flow_missing_required_claim(self):
-        self.__log_event(
-            'authn_oidc_flow_missing_required_claim',
-            'OIDC token endpoint returned a JWT missing a required claim'
+            'oidc_flow_success',
+            f'OIDC flow completed for user {username}'
         )
 
     def authn_login_success(self, username):
@@ -144,6 +96,12 @@ class VocabularyLogger(logging.Logger):
             'malicious_proxy_bypass',
             'An attempt was make to bypass the proxy and access the service '
             'directly'
+        )
+
+    def malicious_csrf(self):
+        self.__log_event(
+            'malicious_csrf',
+            'A attempted CSRF attack was detected and blocked'
         )
 
 

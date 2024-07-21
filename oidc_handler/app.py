@@ -44,32 +44,8 @@ oidc_endpoint = build_url(auth_domain, '')
 
 def _decode(token):
     signing_key = jwks_client.get_signing_key_from_jwt(token)
-    try:
-        claims = jwt.decode(token, signing_key.key, audience=client_id,
-                            algorithms=["RS256"],
-                            options={'require': ['email']})
-        return claims
-    except jwt.exceptions.InvalidSignatureError:
-        logger.authn_oidc_flow_invalid_signature()
-    except jwt.exceptions.ExpiredSignatureError:
-        logger.authn_oidc_flow_expired_signature()
-    except jwt.exceptions.InvalidAudienceError:
-        logger.authn_oidc_flow_invalid_audience()
-    except jwt.exceptions.InvalidIssuerError:
-        logger.authn_oidc_flow_invalid_issuer()
-    except jwt.exceptions.InvalidIssuedAtError:
-        logger.authn_oidc_flow_invalid_issued_at()
-    except jwt.exceptions.ImmatureSignatureError:
-        logger.authn_oidc_flow_immature_signature()
-    except jwt.exceptions.MissingRequiredClaimError:
-        logger.authn_oidc_flow_missing_required_claim()
-    except jwt.exceptions.InvalidKeyError:
-        logger.authn_oidc_flow_invalid_signing_key()
-    except jwt.exceptions.DecodeError:
-        logger.authn_oidc_flow_invalid_token()
-    except jwt.exceptions.InvalidTokenError:
-        logger.authn_oidc_flow_invalid_token()
-    return None
+    return jwt.decode(token, signing_key.key, audience=client_id,
+                      algorithms=["RS256"], options={'require': ['email']})
 
 
 def _is_256_bit_urlsafe_b64(s):
@@ -92,7 +68,7 @@ def handler(request):
         return httplambda.bad_request()
 
     if not s256.match(state_cookie, state_param):
-        logger.authn_oidc_flow_incorrect_state(state_param)
+        logger.malicious_csrf()
         return httplambda.bad_request()
 
     code_param = request.args.get('code', '')
@@ -120,18 +96,20 @@ def handler(request):
         'code_verifier': cookies['code_verifier']
     }
 
-    response = requests.post(f"{oidc_endpoint}/oauth2/token", data=data)
+    try:
+        response = requests.post(f"{oidc_endpoint}/oauth2/token", data=data)
 
-    response.raise_for_status()
-    auth_token = response.json()
+        response.raise_for_status()
+        auth_token = response.json()
 
-    id_token = auth_token['id_token']
-    claims = _decode(id_token)
-
-    if not claims:  # unable to parse token, return unauthorised
+        id_token = auth_token['id_token']
+        claims = _decode(id_token)
+    except Exception as e:
+        logger.oidc_flow_fail(e)
         return httplambda.http_401()
 
     username = claims['email']  # we checked email exists when we decoded
+    logger.oidc_flow_success(username)
 
     session_cookie = '__Host-authy_session_id'
     session = session_cookie in cookies and \
