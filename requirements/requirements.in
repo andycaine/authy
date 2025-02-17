@@ -1,0 +1,2 @@
+-r ../login_handler/requirements.txt
+-r ../oidc_handler/requirements.txt

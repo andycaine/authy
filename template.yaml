@@ -78,7 +78,7 @@ Metadata:
     ReadmeUrl: README.md
     Labels: ['authz', 'authentication', 'authorisation', 'OIDC', 'python', 'cognito']
     HomePageUrl: https://github.com/andycaine/authy#readme
-    SemanticVersion: 0.3.0
+    SemanticVersion: 0.3.1
     SourceCodeUrl: https://github.com/andycaine/authy
 
 Conditions:
@@ -148,7 +148,7 @@ Resources:
     Properties:
       Location:
         ApplicationId: 'arn:aws:serverlessrepo:eu-west-2:211125310871:applications/origin-key-authorizer'
-        SemanticVersion: 0.1.0
+        SemanticVersion: 0.1.1
       Parameters:
         OriginKey: !Ref OriginKey
 
